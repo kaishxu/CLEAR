@@ -1,5 +1,5 @@
 # DUALRM
-This is the unofficial replication of the paper: [**Replication of Complement Lexical Retrieval with Semantic Residual Embeddings**](https://arxiv.org/abs/2004.13969) (Luyu Gao, Zhuyun Dai). It is still updating! All codes are mainly based on the architecture of [RepBERT](https://github.com/jingtaozhan/RepBERT-Index) ([Jingtao Zhan](https://github.com/jingtaozhan)).
+This is the unofficial replication of the paper: [**Complement Lexical Retrieval with Semantic Residual Embeddings**](https://arxiv.org/abs/2004.13969) (Luyu Gao, Zhuyun Dai). It is still updating! All codes are mainly based on the architecture of [RepBERT](https://github.com/jingtaozhan/RepBERT-Index) ([Jingtao Zhan](https://github.com/jingtaozhan)).
 
 ## Dependencies
 
