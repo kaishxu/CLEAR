@@ -16,7 +16,7 @@ Before running the model, you need to download the [MS MARCO Passage Ranking](ht
 
 All data should be put into the  `./data/` file.
 
-##Preprocessing
+## Preprocessing
 
 To build an indexer by Pyserini, the first step of preprocessing is to create a json-style collection file.
 
