@@ -16,6 +16,7 @@ def sampling(args, mode):
     queries = dict()
     for line in open(os.path.join(args.msmarco_dir, f"queries.{mode}.tsv"), 'r'):
         qid, query = line.split('\t')
+        query = query.rstrip()
         queries[qid] = query
 
     searcher = SimpleSearcher(args.index_dir)

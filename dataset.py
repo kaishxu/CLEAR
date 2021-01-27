@@ -108,13 +108,21 @@ class CLEARDataset(Dataset):
                 top_lst[qid].append({'pid': int(pid), 'score': float(score)})
             top_lst = dict(top_lst)
 
+            # all queries text (for calculating the BM25 scores)
+            queries_text = dict()
+            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"queries.{self.mode}.tsv"), 'r'),
+                            desc="queries text"):
+                qid, text = line.split('\t')
+                text = text.rstrip()
+                queries_text[qid] = text
+
             qids, pos_pids, neg_pids, pos_scores, neg_scores = [], [], [], [], []
             for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv"), 'r'), 
                             desc="qrels"):
                 qid, _, pid, _ = line.split('\t')
                 if qid in top_lst:
-                    neg_docs = random_sample(top_lst[qid], min(7, len(top_lst[qid])))
-                    pos_score = indexer.compute_query_document_score(pid, qid, similarity=custom_bm25)
+                    neg_docs = random_sample(top_lst[qid], min(8, len(top_lst[qid])))  #8: number of neg docs selected from top BM25-assessed candidates
+                    pos_score = indexer.compute_query_document_score(pid, queries_text[qid], similarity=custom_bm25)
 
                     for neg_doc in neg_docs:
                         qids.append(qid)

@@ -72,7 +72,7 @@ def run_parse_args():
     parser.add_argument("--eval_ckpt", type=int, default=None)
     parser.add_argument("--per_gpu_eval_batch_size", default=128, type=int)
     parser.add_argument("--per_gpu_train_batch_size", default=28, type=int)
-    parser.add_argument("--gradient_accumulation_steps", type=int, default=2)
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
 
     parser.add_argument("--no_cuda", action='store_true')
     parser.add_argument('--seed', type=int, default=42)
