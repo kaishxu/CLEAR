@@ -12,7 +12,6 @@ Before running the model, you need to download the [MS MARCO Passage Ranking](ht
 1.  [collection.tar.gz](https://msmarco.blob.core.windows.net/msmarcoranking/collection.tar.gz) (all passages);
 2. [ queries.tar.gz](https://msmarco.blob.core.windows.net/msmarcoranking/queries.tar.gz) (all queries);
 3. [ qrels.train.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/qrels.train.tsv), [ qrels.dev.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/qrels.dev.tsv) (all positive labels);
-4. [ top1000.train.tar.gz](https://msmarco.blob.core.windows.net/msmarcoranking/top1000.train.tar.gz), [ top1000.dev.tar.gz](https://msmarco.blob.core.windows.net/msmarcoranking/top1000.dev.tar.gz) (samples, **provisional**)
 
 All data should be put into the  `./data/` file.
 
@@ -37,7 +36,7 @@ The following steps are similar with RepBERT.
 ```
 python convert_text_to_tokenized.py --queries --collection
 python convert_collection_to_memmap.py
-python compress_top1000.py #the training dataset (still confirming)
+python sample_top.py #the training dataset (still confirming)
 ```
 
 ## Training

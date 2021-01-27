@@ -3,10 +3,10 @@ import gc
 import math
 import json
 import torch
-import random
 import logging
 import numpy as np
 from tqdm import tqdm
+from random import sample as random_sample
 from collections import defaultdict
 from pyserini import search
 from pyserini.index import IndexReader
@@ -36,7 +36,7 @@ class CLEARDataset(Dataset):
         self.args = args
         self.load_collection()  #总passage
         self.load_queries()  #总query
-        self.load_top1000()  #总样本
+        self.load_samples()  #总样本
         self.qry_id = args.qry_id
         self.doc_id = args.doc_id
         self.sep_id = args.sep_id  #特殊token
@@ -94,47 +94,49 @@ class CLEARDataset(Dataset):
             data = json.loads(line)
             self.queries[data['id']] = data['ids']
 
-    def load_top1000(self):
+    def load_samples(self):
         indexer = IndexReader(self.args.index_dir)
         custom_bm25 = search.LuceneSimilarities.bm25(self.args.bm25_k1, self.args.bm25_b)
-        with open(os.path.join(self.args.msmarco_dir, f'top1000.{self.mode}.queries.json'), 'r') as f:
-            top_query_lst = json.load(f)
-        with open(os.path.join(self.args.msmarco_dir, f"top1000.{self.mode}.json"), 'r') as f:
-            top_lst = json.load(f)
 
         if self.mode == 'train':
-            qrels = defaultdict(list)
-            for line in open(os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv"), 'r'):
-                qid, _, pid, _ = line.split('\t')
-                qrels[qid].append(int(pid))
-            qrels = dict(qrels)
+            # top docs by BM25
+            top_lst = defauldict(list)
+            for line in open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'):
+                qid, pid, score = line.split('\t')
+                score = score.rstrip()
+                top_lst[qid].append({'pid': int(pid), 'score': float(score)})
+            top_lst = dict(top_lst)
 
             qids, pos_pids, neg_pids, pos_scores, neg_scores = [], [], [], [], []
-            for qid in tqdm(top_lst, desc="samples"):
-                qids.append(qid)
+            for line in open(os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv"), 'r'):
+                qid, _, pid, _ = line.split('\t')
+                neg_docs = random_sample(top_lst[qid], 7)
+                pos_score = indexer.compute_query_document_score(pid, qid, similarity=custom_bm25)
 
-                #从qrel中选正样本
-                pos_pid = random.choice(qrels[qid])
-                pos_pids.append(pos_pid)
-
-                #从top1000中选负样本
-                neg_pid = random.choice(top_lst[qid])
-                # while neg_pid in qrels[qid]:
-                #     neg_pid = random.choice(top_lst[qid])
-                neg_pids.append(neg_pid)
-
-                #计算样本s_lex
-                pos_scores.append(indexer.compute_query_document_score(str(pos_pid), top_query_lst[qid], similarity=custom_bm25))
-                neg_scores.append(indexer.compute_query_document_score(str(neg_pid), top_query_lst[qid], similarity=custom_bm25))
+                for neg_doc in neg_docs:
+                    qids.append(qid)
+                    pos_pids.append(int(pid))
+                    neg_pids.append(neg_doc['pid'])
+                    pos_scores.append(pos_score)
+                    neg_scores.append(neg_doc['score'])
             self.qids, self.pos_pids, self.neg_pids = qids, pos_pids, neg_pids
             self.pos_scores, self.neg_scores = pos_scores, neg_scores
         else:
             qids, pids, scores = [], [], []
-            for qid in top_lst:
-                for pid in top_lst[qid]:
+            qrels_path = os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv")
+            if os.path.exists(qrels_path):
+                for line in open(qrels_path, 'r'):
+                    qid, _, pid, _ = line.split('\t')
                     qids.append(qid)
-                    pids.append(pid)
-                    scores.append(indexer.compute_query_document_score(str(pid), top_query_lst[qid]))
+                    pids.append(int(pid))
+                    scores.append(indexer.compute_query_document_score(pid, qid, similarity=custom_bm25))
+
+            for line in open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'):
+                qid, pid, score = line.split('\t')
+                score = score.rstrip()
+                qids.append(qid)
+                pids.append(int(pid))
+                scores.append(score)
             self.qids, self.pids, self.scores = qids, pids, scores
 
 

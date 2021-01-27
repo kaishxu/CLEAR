@@ -11,7 +11,6 @@ class CLEAR(BertPreTrainedModel):
         self.Ksi = args.Ksi
         self.Lambda = args.Lambda
         self.act = nn.ReLU()
-
         self.init_weights()
     
     def forward(self, **kwargs):
