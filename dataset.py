@@ -100,25 +100,28 @@ class CLEARDataset(Dataset):
 
         if self.mode == 'train':
             # top docs by BM25
-            top_lst = defauldict(list)
-            for line in open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'):
+            top_lst = defaultdict(list)
+            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'),
+                            desc="top candidates"):
                 qid, pid, score = line.split('\t')
                 score = score.rstrip()
                 top_lst[qid].append({'pid': int(pid), 'score': float(score)})
             top_lst = dict(top_lst)
 
             qids, pos_pids, neg_pids, pos_scores, neg_scores = [], [], [], [], []
-            for line in open(os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv"), 'r'):
+            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv"), 'r'), 
+                            desc="qrels"):
                 qid, _, pid, _ = line.split('\t')
-                neg_docs = random_sample(top_lst[qid], 7)
-                pos_score = indexer.compute_query_document_score(pid, qid, similarity=custom_bm25)
+                if qid in top_lst:
+                    neg_docs = random_sample(top_lst[qid], min(7, len(top_lst[qid])))
+                    pos_score = indexer.compute_query_document_score(pid, qid, similarity=custom_bm25)
 
-                for neg_doc in neg_docs:
-                    qids.append(qid)
-                    pos_pids.append(int(pid))
-                    neg_pids.append(neg_doc['pid'])
-                    pos_scores.append(pos_score)
-                    neg_scores.append(neg_doc['score'])
+                    for neg_doc in neg_docs:
+                        qids.append(qid)
+                        pos_pids.append(int(pid))
+                        neg_pids.append(neg_doc['pid'])
+                        pos_scores.append(pos_score)
+                        neg_scores.append(neg_doc['score'])
             self.qids, self.pos_pids, self.neg_pids = qids, pos_pids, neg_pids
             self.pos_scores, self.neg_scores = pos_scores, neg_scores
         else:

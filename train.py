@@ -174,7 +174,7 @@ def main():
     model.resize_token_embeddings(len(tokenizer))
     model.to(args.device)
 
-    logger.info("Training/evaluation parameters %s", json.dumps(args, indent=2))
+    logger.info("Training/evaluation parameters %s", args)
     # Evaluation
     if args.mode == "train":
         train(args, model)
