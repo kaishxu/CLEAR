@@ -28,7 +28,7 @@ Then using Pyserini to build an indexer.
 
 ```
 python -m pyserini.index -collection JsonCollection -generator DefaultLuceneDocumentGenerator \
--input ./data/index -threads <n>\  #the number of thread depends on your own device
+-input ./data/index -threads <n> \  #the number of thread depends on your own device
 -index ./data/index -storePositions -storeDocvectors -storeRaw
 ```
 
