@@ -8,6 +8,7 @@ import logging
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
+from pyserini import search
 from pyserini.index import IndexReader
 from torch.utils.data import Dataset
 
@@ -95,6 +96,7 @@ class CLEARDataset(Dataset):
 
     def load_top1000(self):
         indexer = IndexReader(self.args.index_dir)
+        custom_bm25 = search.LuceneSimilarities.bm25(self.args.bm25_k1, self.args.bm25_b)
         with open(os.path.join(self.args.msmarco_dir, f'top1000.{self.mode}.queries.json'), 'r') as f:
             top_query_lst = json.load(f)
         with open(os.path.join(self.args.msmarco_dir, f"top1000.{self.mode}.json"), 'r') as f:
@@ -122,8 +124,8 @@ class CLEARDataset(Dataset):
                 neg_pids.append(neg_pid)
 
                 #计算样本s_lex
-                pos_scores.append(indexer.compute_query_document_score(str(pos_pid), top_query_lst[qid]))
-                neg_scores.append(indexer.compute_query_document_score(str(neg_pid), top_query_lst[qid]))
+                pos_scores.append(indexer.compute_query_document_score(str(pos_pid), top_query_lst[qid], similarity=custom_bm25))
+                neg_scores.append(indexer.compute_query_document_score(str(neg_pid), top_query_lst[qid], similarity=custom_bm25))
             self.qids, self.pos_pids, self.neg_pids = qids, pos_pids, neg_pids
             self.pos_scores, self.neg_scores = pos_scores, neg_scores
         else:

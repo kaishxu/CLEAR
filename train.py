@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import torch
 import random
 import logging
@@ -173,7 +174,7 @@ def main():
     model.resize_token_embeddings(len(tokenizer))
     model.to(args.device)
 
-    logger.info("Training/evaluation parameters %s", args)
+    logger.info("Training/evaluation parameters %s", json.dumps(args, indent=2))
     # Evaluation
     if args.mode == "train":
         train(args, model)

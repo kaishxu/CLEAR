@@ -28,8 +28,8 @@ Then using Pyserini to build an indexer.
 
 ```
 python -m pyserini.index -collection JsonCollection -generator DefaultLuceneDocumentGenerator \
--input ./data \
--index ./data/indexer -storePositions -storeDocvectors -storeRaw
+-input ./data/index -thread <n>\  #the number of thread depends on your own device
+-index ./data/index -storePositions -storeDocvectors -storeRaw
 ```
 
 The following steps are similar with RepBERT.
