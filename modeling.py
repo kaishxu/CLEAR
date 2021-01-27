@@ -22,7 +22,7 @@ class CLEAR(BertPreTrainedModel):
             pos_s_emb = self.S_emb(self.encoding(query_input_ids, query_mask), self.encoding(pos_doc_input_ids, pos_doc_mask))
             neg_s_emb = self.S_emb(self.encoding(query_input_ids, query_mask), self.encoding(neg_doc_input_ids, neg_doc_mask))
             mr = self.Ksi - self.Lambda * (pos_s_lex - neg_s_lex)
-            return self.act(mr.squeeze() - pos_s_emb + neg_s_emb)
+            return torch.mean(self.act(mr.squeeze() - pos_s_emb + neg_s_emb))
         elif len(kwargs) == 5:
             query_input_ids, query_mask = kwargs['query_input_ids'], kwargs['query_mask']
             doc_input_ids, doc_mask = kwargs['doc_input_ids'], kwargs['doc_mask']

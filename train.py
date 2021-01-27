@@ -69,9 +69,7 @@ def train(args, model):
 
             batch = {k:v.to(args.device) for k, v in batch.items()}
             model.train()
-            outputs = model(**batch)
-            loss = outputs[0]  # model outputs are always tuple in pytorch-transformers (see doc)
-
+            loss = model(**batch)
             if args.n_gpu > 1:
                 loss = loss.mean() # mean() to average on multi-gpu parallel (not distributed) training
             if args.gradient_accumulation_steps > 1:
@@ -128,8 +126,7 @@ def evaluate(args, model, mode, prefix):
             model.eval()
             with torch.no_grad():
                 batch = {k:v.to(args.device) for k, v in batch.items()}
-                outputs = model(**batch)
-                scores = outputs[0]
+                scores = model(**batch)
                 assert len(qids) == len(pids) == len(scores)
                 for qid, pid, score in zip(qids, pids, scores):
                     outputfile.write(f"{qid}\t{pid}\t{score}\n")

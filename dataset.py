@@ -46,7 +46,10 @@ class CLEARDataset(Dataset):
         gc.collect()
 
     def __len__(self):
-        assert len(self.qids) == len(self.pos_pids) == len(self.neg_pids)
+        if self.mode == 'train':
+            assert len(self.qids) == len(self.pos_pids) == len(self.neg_pids)
+        else:
+            assert len(self.qids) == len(self.pids)
         return len(self.qids)
 
     def __getitem__(self, item):
@@ -90,7 +93,7 @@ class CLEARDataset(Dataset):
 
     def load_queries(self):
         self.queries = dict()
-        for line in tqdm(open(f"{self.args.tokenize_dir}/queries.{self.mode}.json", 'r'), desc="queries"):
+        for line in open(f"{self.args.tokenize_dir}/queries.{self.mode}.json", 'r'):
             data = json.loads(line)
             self.queries[data['id']] = data['ids']
 
@@ -98,27 +101,26 @@ class CLEARDataset(Dataset):
         indexer = IndexReader(self.args.index_dir)
         custom_bm25 = search.LuceneSimilarities.bm25(self.args.bm25_k1, self.args.bm25_b)
 
+        # all queries text (for calculating the BM25 scores)
+        queries_text = dict()
+        for line in open(os.path.join(self.args.msmarco_dir, f"queries.{self.mode}.tsv"), 'r'):
+            qid, text = line.split('\t')
+            text = text.rstrip()
+            queries_text[qid] = text
+
         if self.mode == 'train':
             # top docs by BM25
             top_lst = defaultdict(list)
             for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'),
-                            desc="top candidates"):
+                            desc=f"{self.mode} top candidates"):
                 qid, pid, score = line.split('\t')
                 score = score.rstrip()
                 top_lst[qid].append({'pid': int(pid), 'score': float(score)})
             top_lst = dict(top_lst)
 
-            # all queries text (for calculating the BM25 scores)
-            queries_text = dict()
-            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"queries.{self.mode}.tsv"), 'r'),
-                            desc="queries text"):
-                qid, text = line.split('\t')
-                text = text.rstrip()
-                queries_text[qid] = text
-
             qids, pos_pids, neg_pids, pos_scores, neg_scores = [], [], [], [], []
             for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv"), 'r'), 
-                            desc="qrels"):
+                            desc=f"{self.mode} qrels"):
                 qid, _, pid, _ = line.split('\t')
                 if qid in top_lst:
                     neg_docs = random_sample(top_lst[qid], min(8, len(top_lst[qid])))  #8: number of neg docs selected from top BM25-assessed candidates
@@ -136,18 +138,20 @@ class CLEARDataset(Dataset):
             qids, pids, scores = [], [], []
             qrels_path = os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv")
             if os.path.exists(qrels_path):
-                for line in open(qrels_path, 'r'):
+                for line in tqdm(open(qrels_path, 'r'), 
+                                desc=f"{self.mode} qrels"):
                     qid, _, pid, _ = line.split('\t')
                     qids.append(qid)
                     pids.append(int(pid))
-                    scores.append(indexer.compute_query_document_score(pid, qid, similarity=custom_bm25))
+                    scores.append(indexer.compute_query_document_score(pid, queries_text[qid], similarity=custom_bm25))
 
-            for line in open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'):
+            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'), 
+                            desc=f'{self.mode} top candidates'):
                 qid, pid, score = line.split('\t')
                 score = score.rstrip()
                 qids.append(qid)
                 pids.append(int(pid))
-                scores.append(score)
+                scores.append(float(score))
             self.qids, self.pids, self.scores = qids, pids, scores
 
 
@@ -194,7 +198,7 @@ def get_collate_function(mode):  #将batch数据转化为tensor
                 "doc_input_ids": pack_tensor(doc_input_ids, dtype=torch.int64),
                 "query_mask": pack_tensor(query_mask, dtype=torch.int64),
                 "doc_mask": pack_tensor(doc_mask, dtype=torch.int64),
-                "s_lex": torch.tensor(s_lex, dtype=torch.float16),
+                "s_lex": torch.tensor(s_lex, dtype=torch.float32),
             }
             qid_lst = [x['qid'] for x in batch]
             pid_lst = [x['pid'] for x in batch]
