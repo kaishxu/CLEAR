@@ -3,7 +3,7 @@ This is the unofficial replication of the paper: [**Complement Lexical Retrieval
 
 ## Dependencies
 
-DUALRM requires the Python 3, Pytorch 1, and [Pyserini](https://github.com/castorini/pyserini/), and uses the [HuggingFace Transformers](https://github.com/huggingface/transformers) library (v4.2.1).
+DUALRM requires the Python 3, Pytorch 1, and [Pyserini](https://github.com/castorini/pyserini/), and uses the [HuggingFace Transformers](https://github.com/huggingface/transformers) library (v4.2.1). To use Pyserini, you are required to configure a **Java** environment. 
 
 ## Data
 
@@ -28,7 +28,7 @@ Then using Pyserini to build an indexer.
 
 ```
 python -m pyserini.index -collection JsonCollection -generator DefaultLuceneDocumentGenerator \
--input ./data/index -thread <n>\  #the number of thread depends on your own device
+-input ./data/index -threads <n>\  #the number of thread depends on your own device
 -index ./data/index -storePositions -storeDocvectors -storeRaw
 ```
 
