@@ -9,9 +9,7 @@ DUALRM requires the Python 3, Pytorch 1, and [Pyserini](https://github.com/casto
 
 Before running the model, you need to download the [MS MARCO Passage Ranking](https://github.com/microsoft/MSMARCO-Passage-Ranking) dataset at first. The specific datasets are as follows.
 
-1.  [collection.tar.gz](https://msmarco.blob.core.windows.net/msmarcoranking/collection.tar.gz) (all passages);
-2. [ queries.tar.gz](https://msmarco.blob.core.windows.net/msmarcoranking/queries.tar.gz) (all queries);
-3. [ qrels.train.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/qrels.train.tsv), [ qrels.dev.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/qrels.dev.tsv) (all positive labels);
+[collectionandqueries.tar.gz](https://msmarco.blob.core.windows.net/msmarcoranking/collectionandqueries.tar.gz) (all passages)
 
 All data should be put into the  `./data/` file.
 

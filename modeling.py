@@ -6,7 +6,6 @@ import numpy as np
 class CLEAR(BertPreTrainedModel):
     def __init__(self, config, args):
         super(CLEAR, self).__init__(config)
-
         self.bert = BertModel(config)
         self.Ksi = args.Ksi
         self.Lambda = args.Lambda
@@ -42,3 +41,22 @@ class CLEAR(BertPreTrainedModel):
     def S_emb(self, rep_q, rep_d):
         assert rep_q.shape == rep_d.shape
         return torch.mul(rep_q, rep_d).sum(1) / torch.norm(rep_q, dim=1) / torch.norm(rep_d, dim=1)
+
+
+class CLEAR_Embedding(BertPreTrainedModel):
+    def __init__(self, config):
+        super(CLEAR_Embedding, self).__init__(config)
+        self.bert = BertModel(config)
+        self.init_weights()
+    
+    def forward(self, **kwargs):
+        input_ids, mask = kwargs['input_ids'], kwargs['mask']
+        return self.encoding(input_ids, mask)
+
+    def mean_pooling(self, sequence_vectors):
+        return torch.mean(sequence_vectors, dim=1)
+
+    def encoding(self, input_ids, attention_mask):
+        sequence_vectors = self.bert(input_ids=input_ids, attention_mask=attention_mask)[0]
+        rep = self.mean_pooling(sequence_vectors)
+        return rep
