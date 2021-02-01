@@ -100,6 +100,8 @@ class CLEARDataset(Dataset):
     def load_samples(self):
         indexer = IndexReader(self.args.index_dir)
         custom_bm25 = search.LuceneSimilarities.bm25(self.args.bm25_k1, self.args.bm25_b)
+        qrels_path = os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv")
+        candidates_path = os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv")
 
         # all queries text (for calculating the BM25 scores)
         queries_text = dict()
@@ -109,26 +111,31 @@ class CLEARDataset(Dataset):
             queries_text[qid] = text
 
         if self.mode == 'train':
-            # top docs by BM25
+            # qrel (labels)
+            qrel_lst = defaultdict(list)
+            for line in tqdm(open(qrels_path, 'r'), desc=f"{self.mode} qrels"):
+                qid, _, pid, _ = line.split('\t')
+                qrel_lst[qid].append(int(pid))
+            qrel_lst = dict(qrel_lst)
+
+            # top docs by BM25 (neg samples)
             top_lst = defaultdict(list)
-            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'),
-                            desc=f"{self.mode} top candidates"):
+            for line in tqdm(open(candidates_path, 'r'), desc=f"{self.mode} top candidates"):
                 qid, pid, score = line.split('\t')
                 score = score.rstrip()
-                top_lst[qid].append({'pid': int(pid), 'score': float(score)})
+                if int(pid) not in qrel_lst[qid]:
+                    top_lst[qid].append({'pid': int(pid), 'score': float(score)})
             top_lst = dict(top_lst)
 
             qids, pos_pids, neg_pids, pos_scores, neg_scores = [], [], [], [], []
-            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv"), 'r'), 
-                            desc=f"{self.mode} qrels"):
-                qid, _, pid, _ = line.split('\t')
+            for qid in tqdm(qrel_lst, desc=f"{self.mode} samples"):
                 if qid in top_lst:
+                    pos_pid = random_sample(qrel_lst[qid], 1)[0]
+                    pos_score = indexer.compute_query_document_score(str(pos_pid), queries_text[qid], similarity=custom_bm25)
                     neg_docs = random_sample(top_lst[qid], min(8, len(top_lst[qid])))  #8: number of neg docs selected from top BM25-assessed candidates
-                    pos_score = indexer.compute_query_document_score(pid, queries_text[qid], similarity=custom_bm25)
-
                     for neg_doc in neg_docs:
                         qids.append(qid)
-                        pos_pids.append(int(pid))
+                        pos_pids.append(pos_pid)
                         neg_pids.append(neg_doc['pid'])
                         pos_scores.append(pos_score)
                         neg_scores.append(neg_doc['score'])
@@ -136,17 +143,13 @@ class CLEARDataset(Dataset):
             self.pos_scores, self.neg_scores = pos_scores, neg_scores
         else:
             qids, pids, scores = [], [], []
-            qrels_path = os.path.join(self.args.msmarco_dir, f"qrels.{self.mode}.tsv")
-            if os.path.exists(qrels_path):
-                for line in tqdm(open(qrels_path, 'r'), 
-                                desc=f"{self.mode} qrels"):
-                    qid, _, pid, _ = line.split('\t')
-                    qids.append(qid)
-                    pids.append(int(pid))
-                    scores.append(indexer.compute_query_document_score(pid, queries_text[qid], similarity=custom_bm25))
+            for line in tqdm(open(qrels_path, 'r'), desc=f"{self.mode} qrels"):
+                qid, _, pid, _ = line.split('\t')
+                qids.append(qid)
+                pids.append(int(pid))
+                scores.append(indexer.compute_query_document_score(pid, queries_text[qid], similarity=custom_bm25))
 
-            for line in tqdm(open(os.path.join(self.args.msmarco_dir, f"top_candidates.{self.mode}.tsv"), 'r'), 
-                            desc=f'{self.mode} top candidates'):
+            for line in tqdm(open(candidates_path, 'r'), desc=f'{self.mode} top candidates'):
                 qid, pid, score = line.split('\t')
                 score = score.rstrip()
                 qids.append(qid)

@@ -84,7 +84,7 @@ def train(args, model):
                 model.zero_grad()
                 global_step += 1
                 if args.evaluate_during_training and (global_step % args.training_eval_steps == 0):
-                    mrr = evaluate(args, model, mode="dev", prefix="step_{}".format(global_step))
+                    mrr = evaluate(args, model, mode="dev.small", prefix="step_{}".format(global_step))
                     tb_writer.add_scalar('dev/MRR@10', mrr, global_step)
 
                 if args.logging_steps > 0 and (global_step % args.logging_steps == 0):
@@ -134,7 +134,7 @@ def evaluate(args, model, mode, prefix):
     rank_output = f"{eval_output_dir}/{prefix}.{mode}.rank.tsv"
     generate_rank(output_file_path, rank_output)
 
-    if mode == "dev":
+    if mode == "dev.small":
         mrr = eval_results(rank_output)
         return mrr
 
@@ -167,15 +167,16 @@ def main():
     args.sep_id = tokenizer.sep_token_id
 
     config = BertConfig.from_pretrained(load_model_path)
-    model = CLEAR.from_pretrained(load_model_path, config=config, args=args)
-    model.resize_token_embeddings(len(tokenizer))
-    model.to(args.device)
+    model = CLEAR.from_pretrained(load_model_path, config=config, args=args)    
 
     logger.info("Training/evaluation parameters %s", args)
     # Evaluation
     if args.mode == "train":
+        model.resize_token_embeddings(len(tokenizer))
+        model.to(args.device)
         train(args, model)
     else:
+        model.to(args.device)
         result = evaluate(args, model, args.mode, prefix=f"ckpt-{args.eval_ckpt}")
         print(result)
 

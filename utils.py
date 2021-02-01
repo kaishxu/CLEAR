@@ -26,7 +26,7 @@ def generate_rank(input_path, output_path):
         for qid, pid_lst in score_dict.items():
             random.shuffle(pid_lst)
             pid_lst = sorted(pid_lst, key=lambda x:x[0], reverse=True)
-            for rank_idx, (score, pid) in enumerate(pid_lst):
+            for rank_idx, (score, pid) in enumerate(pid_lst[:1000]):
                 outFile.write("{}\t{}\t{}\n".format(qid, pid, rank_idx + 1))
 
 
@@ -53,7 +53,7 @@ def run_parse_args():
     parser = argparse.ArgumentParser()
 
     ## Required parameters
-    parser.add_argument("--mode", choices=["train", "dev", "eval"], required=True)
+    parser.add_argument("--mode", choices=["train", "dev.small"], required=True)
     parser.add_argument("--output_dir", type=str, default=f"./train")
     parser.add_argument("--bert_path", type=str, default=f"./bert-base-uncased")
     

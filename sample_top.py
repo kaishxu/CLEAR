@@ -4,17 +4,17 @@ from tqdm import tqdm
 from pyserini.search import SimpleSearcher
 from collections import defaultdict
 
-def sampling(args, mode):
+def sampling(args):
     # load the positive doc
     qrels = defaultdict(list)
-    for line in open(os.path.join(args.msmarco_dir, f"qrels.{mode}.tsv"), 'r'):
+    for line in open(os.path.join(args.msmarco_dir, f"qrels.{args.mode}.tsv"), 'r'):
         qid, _, pid, _ = line.split('\t')
         qrels[qid].append(int(pid))
     qrels = dict(qrels)
 
     # load the queries
     queries = dict()
-    for line in open(os.path.join(args.msmarco_dir, f"queries.{mode}.tsv"), 'r'):
+    for line in open(os.path.join(args.msmarco_dir, f"queries.{args.mode}.tsv"), 'r'):
         qid, query = line.split('\t')
         query = query.rstrip()
         queries[qid] = query
@@ -22,7 +22,7 @@ def sampling(args, mode):
     searcher = SimpleSearcher(args.index_dir)
     searcher.set_bm25(k1=args.bm25_k1, b=args.bm25_b)
     
-    with open(os.path.join(args.output_dir, f'top_candidates.{mode}.tsv'), 'w') as outfile:
+    with open(os.path.join(args.output_dir, f'top_candidates.{args.mode}.tsv'), 'w') as outfile:
         for qid in tqdm(qrels):
             query = queries[qid]
             candidates = searcher.search(query, k=args.topN)
@@ -38,8 +38,8 @@ if __name__ == "__main__":
     parser.add_argument("--bm25_k1", type=float, default=0.6)
     parser.add_argument("--bm25_b", type=float, default=0.8)
     parser.add_argument("--topN", type=int, default=100)
+    parser.add_argument("--mode", choices=["train", "dev", "dev.small"], required=True)
     args = parser.parse_args()
 
     # sampling
-    sampling(args, mode='train')
-    sampling(args, mode='dev')
+    sampling(args)

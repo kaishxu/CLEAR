@@ -40,7 +40,7 @@ class CLEAR(BertPreTrainedModel):
 
     def S_emb(self, rep_q, rep_d):
         assert rep_q.shape == rep_d.shape
-        return torch.mul(rep_q, rep_d).sum(1) / torch.norm(rep_q, dim=1) / torch.norm(rep_d, dim=1)
+        return torch.mul(rep_q, rep_d).sum(1)
 
 
 class CLEAR_Embedding(BertPreTrainedModel):

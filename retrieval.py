@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--precompute_dir", type=str, default="./data/precompute")
     parser.add_argument("--index_dir", type=str, default="./data/index")
     parser.add_argument("--bm25_dir", type=str, default="./data/bm25_result")
-    parser.add_argument("--result_file", type=str, default="./result.tsv")
+    parser.add_argument("--result_file", type=str, default="./result")
     parser.add_argument("--search_batch", type=int, default=256)
     args = parser.parse_args()
     query_embedding_dir = os.path.join(args.precompute_dir, "query_embedding")
@@ -34,31 +34,32 @@ if __name__ == "__main__":
     dim = query_embeddings.shape[1]
 
     # initialize faiss
-    print("Normalizing...")
-    faiss.normalize_L2(query_embeddings)
-    faiss.normalize_L2(doc_embeddings)
+    # print("Normalizing...")
+    # faiss.normalize_L2(query_embeddings)
+    # faiss.normalize_L2(doc_embeddings)
 
     # faiss GPU
     print("Initializing FAISS...")
-    # res = faiss.StandardGpuResources()
     index_flat = faiss.IndexFlatIP(dim)
-    # gpu_index_flat = faiss.index_cpu_to_gpu(res, 0, index_flat)
-    gpu_index_flat = index_flat
 
     # add base vectors
     print("Adding docs...")
-    gpu_index_flat.add(doc_embeddings)
+    index_flat.add(doc_embeddings)
 
     # search
     # num = doc_embeddings.shape[0]
     num = 5000
 
     steps = math.ceil(query_embeddings.shape[0] / args.search_batch)
-    with open(args.result_file, 'w') as outfile:
+    score_path = args.result_file + "/rank_score.tsv"
+    with open(score_path, 'w') as outfile:
         for i in tqdm(range(steps), desc="steps"):
             batch = query_embeddings[i * args.search_batch : (i+1) * args.search_batch]
-            D, I = gpu_index_flat.search(batch, num)
+            D, I = index_flat.search(batch, num)
             for b_i, index_pids in enumerate(I):
                 qid = i * args.search_batch + b_i
                 for b_j, index_pid in enumerate(index_pids):
                     outfile.write(f"{qids[qid]}\t{pids[index_pid]}\t{D[b_i, b_j]}\n")
+
+    output_path = args.result_file + "/rank.tsv"
+    generate_rank(score_path, output_path)

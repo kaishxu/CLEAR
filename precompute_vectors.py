@@ -56,7 +56,7 @@ class CLEAR_PreDataset(Dataset):
             self.text_tokens = Collection(args.collection_memmap_dir)
             self.ids = self.text_tokens.pids
 
-    def __len__(self):  
+    def __len__(self):
         return len(self.ids)
 
     def __getitem__(self, item):
@@ -66,7 +66,7 @@ class CLEAR_PreDataset(Dataset):
         input_ids = [self.cls_id] + input_ids + [self.sep_id]
         sample = {
             "input_ids": input_ids,
-            "id" : id_
+            "id" : id_  #真实id
         }
         return sample
 
@@ -93,6 +93,7 @@ def generate_embeddings(args, model):
     if args.mode == "query":
         memmap_dir = args.query_embedding_dir
     else:
+        assert args.mode == "doc"
         memmap_dir = args.doc_embedding_dir
     dataset = CLEAR_PreDataset(args)
 
