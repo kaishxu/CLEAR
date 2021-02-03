@@ -32,7 +32,7 @@ def generate_rank(input_path, output_path):
 
 def eval_results(run_file_path,
         eval_script="./ms_marco_eval.py", 
-        qrels="./data/qrels.dev.tsv"):
+        qrels="./data/qrels.dev.small.tsv"):
     assert os.path.exists(eval_script) and os.path.exists(qrels)
     result = subprocess.check_output(['python', eval_script, qrels, run_file_path])
     match = re.search('MRR @10: ([\d.]+)', result.decode('utf-8'))
@@ -62,23 +62,24 @@ def run_parse_args():
     parser.add_argument("--tokenize_dir", type=str, default="./data/tokenize")
     parser.add_argument("--index_dir", type=str, default="./data/index")
     parser.add_argument("--max_query_length", type=int, default=20)
-    parser.add_argument("--max_doc_length", type=int, default=256)
+    parser.add_argument("--max_doc_length", type=int, default=128)
     parser.add_argument("--bm25_k1", type=float, default=0.6)
     parser.add_argument("--bm25_b", type=float, default=0.8)
     parser.add_argument("--Lambda", type=float, default=0.1)
     parser.add_argument("--Ksi", type=float, default=1)
+    parser.add_argument("--p", type=int, default=10)
 
     ## Training parameters
     parser.add_argument("--eval_ckpt", type=int, default=None)
     parser.add_argument("--per_gpu_eval_batch_size", default=512, type=int)
-    parser.add_argument("--per_gpu_train_batch_size", default=32, type=int)
+    parser.add_argument("--per_gpu_train_batch_size", default=28, type=int)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
 
     parser.add_argument("--no_cuda", action='store_true')
     parser.add_argument('--seed', type=int, default=42)
 
     parser.add_argument("--evaluate_during_training", action="store_true")
-    parser.add_argument("--training_eval_steps", type=int, default=100)
+    parser.add_argument("--training_eval_steps", type=int, default=5000)
 
     parser.add_argument("--save_steps", type=int, default=5000)
     parser.add_argument("--logging_steps", type=int, default=100)
@@ -86,10 +87,9 @@ def run_parse_args():
 
     parser.add_argument("--learning_rate", default=2e-5, type=float)
     parser.add_argument("--weight_decay", default=0.01, type=float)
-    parser.add_argument("--warmup_steps", default=10000, type=int)
     parser.add_argument("--adam_epsilon", default=1e-8, type=float)
     parser.add_argument("--max_grad_norm", default=1.0, type=float)
-    parser.add_argument("--num_train_epochs", default=1, type=int)
+    parser.add_argument("--num_train_epochs", default=2, type=int)
 
     args = parser.parse_args()
 

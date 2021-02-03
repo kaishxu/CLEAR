@@ -33,11 +33,6 @@ if __name__ == "__main__":
     assert query_embeddings.shape[1] == doc_embeddings.shape[1]
     dim = query_embeddings.shape[1]
 
-    # initialize faiss
-    # print("Normalizing...")
-    # faiss.normalize_L2(query_embeddings)
-    # faiss.normalize_L2(doc_embeddings)
-
     # faiss GPU
     print("Initializing FAISS...")
     index_flat = faiss.IndexFlatIP(dim)

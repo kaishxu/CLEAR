@@ -130,25 +130,21 @@ class CLEARDataset(Dataset):
             qids, pos_pids, neg_pids, pos_scores, neg_scores = [], [], [], [], []
             for qid in tqdm(qrel_lst, desc=f"{self.mode} samples"):
                 if qid in top_lst:
-                    pos_pid = random_sample(qrel_lst[qid], 1)[0]
-                    pos_score = indexer.compute_query_document_score(str(pos_pid), queries_text[qid], similarity=custom_bm25)
-                    neg_docs = random_sample(top_lst[qid], min(8, len(top_lst[qid])))  #8: number of neg docs selected from top BM25-assessed candidates
-                    for neg_doc in neg_docs:
-                        qids.append(qid)
-                        pos_pids.append(pos_pid)
-                        neg_pids.append(neg_doc['pid'])
-                        pos_scores.append(pos_score)
-                        neg_scores.append(neg_doc['score'])
+                    # pos_pid = random_sample(qrel_lst[qid], 1)[0]
+                    for pos_pid in qrel_lst[qid]:
+                        pos_score = indexer.compute_query_document_score(str(pos_pid), queries_text[qid], similarity=custom_bm25)
+                        neg_docs = top_lst[qid][:self.args.p]  #probability p? not clear, since author doesn't mention
+                        
+                        for neg_doc in neg_docs:
+                            qids.append(qid)
+                            pos_pids.append(pos_pid)
+                            neg_pids.append(neg_doc['pid'])
+                            pos_scores.append(pos_score)
+                            neg_scores.append(neg_doc['score'])
             self.qids, self.pos_pids, self.neg_pids = qids, pos_pids, neg_pids
             self.pos_scores, self.neg_scores = pos_scores, neg_scores
         else:
             qids, pids, scores = [], [], []
-            for line in tqdm(open(qrels_path, 'r'), desc=f"{self.mode} qrels"):
-                qid, _, pid, _ = line.split('\t')
-                qids.append(qid)
-                pids.append(int(pid))
-                scores.append(indexer.compute_query_document_score(pid, queries_text[qid], similarity=custom_bm25))
-
             for line in tqdm(open(candidates_path, 'r'), desc=f'{self.mode} top candidates'):
                 qid, pid, score = line.split('\t')
                 score = score.rstrip()

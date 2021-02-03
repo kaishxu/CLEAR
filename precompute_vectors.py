@@ -113,7 +113,7 @@ def generate_embeddings(args, model):
     logger.info("  Batch size = %d", batch_size)
 
     start = timer()
-    for batch, ids in tqdm(dataloader, desc="Evaluating"):
+    for batch, ids in tqdm(dataloader, desc="Generating embeddings"):
         model.eval()
         with torch.no_grad():
             batch = {k:v.to(args.device) for k, v in batch.items()}

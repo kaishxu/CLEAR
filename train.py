@@ -8,8 +8,8 @@ import argparse
 import numpy as np
 from tqdm import tqdm, trange
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader, SequentialSampler
-from transformers import BertConfig, AdamW, get_linear_schedule_with_warmup, BertTokenizer
+from torch.utils.data import DataLoader, RandomSampler
+from transformers import BertConfig, BertTokenizer
 
 from modeling import CLEAR
 from dataset import CLEARDataset, get_collate_function
@@ -28,7 +28,7 @@ def train(args, model):
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
 
     train_dataset = CLEARDataset(mode="train", args=args)
-    train_sampler = SequentialSampler(train_dataset) 
+    train_sampler = RandomSampler(train_dataset) 
     collate_fn = get_collate_function(mode="train")
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, 
         batch_size=args.train_batch_size, num_workers=args.data_num_workers, pin_memory=True, collate_fn=collate_fn)
@@ -41,8 +41,7 @@ def train(args, model):
         {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=steps_total)
+    optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
 
     # multi-gpu training (should be after apex fp16 initialization)
     if args.n_gpu > 1:
@@ -80,7 +79,6 @@ def train(args, model):
             tr_loss += loss.item()
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 optimizer.step()
-                scheduler.step()  # Update learning rate schedule
                 model.zero_grad()
                 global_step += 1
                 if args.evaluate_during_training and (global_step % args.training_eval_steps == 0):
@@ -88,7 +86,6 @@ def train(args, model):
                     tb_writer.add_scalar('dev/MRR@10', mrr, global_step)
 
                 if args.logging_steps > 0 and (global_step % args.logging_steps == 0):
-                    tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
                     cur_loss =  (tr_loss - logging_loss)/args.logging_steps
                     tb_writer.add_scalar('train/loss', cur_loss, global_step)
                     logging_loss = tr_loss
