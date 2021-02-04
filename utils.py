@@ -79,7 +79,7 @@ def run_parse_args():
     parser.add_argument('--seed', type=int, default=42)
 
     parser.add_argument("--evaluate_during_training", action="store_true")
-    parser.add_argument("--training_eval_steps", type=int, default=5000)
+    parser.add_argument("--training_eval_steps", type=int, default=1000)
 
     parser.add_argument("--save_steps", type=int, default=5000)
     parser.add_argument("--logging_steps", type=int, default=100)

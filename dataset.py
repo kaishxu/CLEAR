@@ -122,7 +122,6 @@ class CLEARDataset(Dataset):
             top_lst = defaultdict(list)
             for line in tqdm(open(candidates_path, 'r'), desc=f"{self.mode} top candidates"):
                 qid, pid, score = line.split('\t')
-                score = score.rstrip()
                 if int(pid) not in qrel_lst[qid]:
                     top_lst[qid].append({'pid': int(pid), 'score': float(score)})
             top_lst = dict(top_lst)
@@ -130,7 +129,6 @@ class CLEARDataset(Dataset):
             qids, pos_pids, neg_pids, pos_scores, neg_scores = [], [], [], [], []
             for qid in tqdm(qrel_lst, desc=f"{self.mode} samples"):
                 if qid in top_lst:
-                    # pos_pid = random_sample(qrel_lst[qid], 1)[0]
                     for pos_pid in qrel_lst[qid]:
                         pos_score = indexer.compute_query_document_score(str(pos_pid), queries_text[qid], similarity=custom_bm25)
                         neg_docs = top_lst[qid][:self.args.p]  #probability p? not clear, since author doesn't mention
@@ -147,7 +145,6 @@ class CLEARDataset(Dataset):
             qids, pids, scores = [], [], []
             for line in tqdm(open(candidates_path, 'r'), desc=f'{self.mode} top candidates'):
                 qid, pid, score = line.split('\t')
-                score = score.rstrip()
                 qids.append(qid)
                 pids.append(int(pid))
                 scores.append(float(score))
