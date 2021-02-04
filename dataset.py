@@ -113,7 +113,7 @@ class CLEARDataset(Dataset):
         if self.mode == 'train':
             # qrel (labels)
             qrel_lst = defaultdict(list)
-            for line in tqdm(open(qrels_path, 'r'), desc=f"{self.mode} qrels"):
+            for line in open(qrels_path, 'r'):
                 qid, _, pid, _ = line.split('\t')
                 qrel_lst[qid].append(int(pid))
             qrel_lst = dict(qrel_lst)

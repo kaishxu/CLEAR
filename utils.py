@@ -81,14 +81,15 @@ def run_parse_args():
     parser.add_argument("--evaluate_during_training", action="store_true")
     parser.add_argument("--training_eval_steps", type=int, default=1000)
 
-    parser.add_argument("--save_steps", type=int, default=5000)
+    parser.add_argument("--save_steps", type=int, default=2500)
     parser.add_argument("--logging_steps", type=int, default=100)
     parser.add_argument("--data_num_workers", default=4, type=int)
 
     parser.add_argument("--learning_rate", default=2e-5, type=float)
+    parser.add_argument("--warmup_portion", default=0.1, type=float)
     parser.add_argument("--weight_decay", default=0.01, type=float)
     parser.add_argument("--adam_epsilon", default=1e-8, type=float)
-    parser.add_argument("--max_grad_norm", default=1.0, type=float)
+    parser.add_argument("--max_grad_norm", default=2.0, type=float)
     parser.add_argument("--num_train_epochs", default=2, type=int)
 
     args = parser.parse_args()

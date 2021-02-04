@@ -1,5 +1,6 @@
 import os
 import re
+import math
 import json
 import torch
 import random
@@ -9,7 +10,7 @@ import numpy as np
 from tqdm import tqdm, trange
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader, RandomSampler
-from transformers import BertConfig, BertTokenizer
+from transformers import BertConfig, BertTokenizer, AdamW, get_linear_schedule_with_warmup
 
 from modeling import CLEAR
 from dataset import CLEARDataset, get_collate_function
@@ -28,6 +29,7 @@ def train(args, model):
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
 
     train_dataset = CLEARDataset(mode="train", args=args)
+    eval_dataset = CLEARDataset(mode="dev.small", args=args)
     train_sampler = RandomSampler(train_dataset) 
     collate_fn = get_collate_function(mode="train")
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, 
@@ -38,10 +40,12 @@ def train(args, model):
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': 0.0},
-        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)]},
+        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)]}
         ]
-    optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon, weight_decay=args.weight_decay)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=math.ceil(steps_total*args.warmup_portion),
+        num_training_steps=steps_total)
 
     # multi-gpu training (should be after apex fp16 initialization)
     if args.n_gpu > 1:
@@ -74,18 +78,20 @@ def train(args, model):
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm) #不确定原文是否用到
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
 
             tr_loss += loss.item()
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 optimizer.step()
+                scheduler.step()  # Update learning rate schedule
                 model.zero_grad()
                 global_step += 1
                 if args.evaluate_during_training and (global_step % args.training_eval_steps == 0):
-                    mrr = evaluate(args, model, mode="dev.small", prefix="step_{}".format(global_step))
+                    mrr = evaluate(args, model, mode="dev.small", prefix="step_{}".format(global_step), eval_dataset=eval_dataset)
                     tb_writer.add_scalar('dev/MRR@10', mrr, global_step)
 
                 if args.logging_steps > 0 and (global_step % args.logging_steps == 0):
+                    tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
                     cur_loss =  (tr_loss - logging_loss)/args.logging_steps
                     tb_writer.add_scalar('train/loss', cur_loss, global_step)
                     logging_loss = tr_loss
@@ -95,12 +101,13 @@ def train(args, model):
                     save_model(model, 'ckpt-{}'.format(global_step), args)
 
 
-def evaluate(args, model, mode, prefix):
+def evaluate(args, model, mode, prefix, eval_dataset=None):
     eval_output_dir = args.eval_save_dir
     if not os.path.exists(eval_output_dir):
         os.makedirs(eval_output_dir)
-  
-    eval_dataset = CLEARDataset(mode=mode, args=args)
+    
+    if eval_dataset == None:
+        eval_dataset = CLEARDataset(mode=mode, args=args)
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -175,7 +182,7 @@ def main():
     else:
         model.to(args.device)
         result = evaluate(args, model, args.mode, prefix=f"ckpt-{args.eval_ckpt}")
-        print(result)
+        print("MRR@10:", result)
 
 
 if __name__ == "__main__":
