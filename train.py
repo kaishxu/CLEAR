@@ -29,7 +29,7 @@ def train(args, model):
     args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
 
     train_dataset = CLEARDataset(mode="train", args=args)
-    eval_dataset = CLEARDataset(mode="dev.small", args=args)
+    eval_dataset = CLEARDataset(mode="dev.small", args=args)  #to save time, only 500 queries are used
     train_sampler = RandomSampler(train_dataset) 
     collate_fn = get_collate_function(mode="train")
     train_dataloader = DataLoader(train_dataset, sampler=train_sampler, 
@@ -40,10 +40,10 @@ def train(args, model):
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)]},
-        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)]}
+        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
+        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
-    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon, weight_decay=args.weight_decay)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=math.ceil(steps_total*args.warmup_portion),
         num_training_steps=steps_total)
 
@@ -139,7 +139,7 @@ def evaluate(args, model, mode, prefix, eval_dataset=None):
     generate_rank(output_file_path, rank_output)
 
     if mode == "dev.small":
-        mrr = eval_results(rank_output)
+        mrr = eval_results(rank_output) * 6980 / args.num_eval_queries
         return mrr
 
 

@@ -142,12 +142,21 @@ class CLEARDataset(Dataset):
             self.qids, self.pos_pids, self.neg_pids = qids, pos_pids, neg_pids
             self.pos_scores, self.neg_scores = pos_scores, neg_scores
         else:
-            qids, pids, scores = [], [], []
-            for line in tqdm(open(candidates_path, 'r'), desc=f'{self.mode} top candidates'):
+            # top docs by BM25 (neg samples)
+            top_lst = defaultdict(list)
+            for line in tqdm(open(candidates_path, 'r'), desc=f"{self.mode} top candidates"):
                 qid, pid, score = line.split('\t')
-                qids.append(qid)
-                pids.append(int(pid))
-                scores.append(float(score))
+                top_lst[qid].append({'pid': int(pid), 'score': float(score)})
+            top_lst = dict(top_lst)
+
+            qids, pids, scores = [], [], []
+            for i, qid in enumerate(top_lst):
+                for doc in top_lst[qid]:
+                    qids.append(qid)
+                    pids.append(doc['pid'])
+                    scores.append(doc['score'])
+                if (i + 1) == self.args.num_eval_queries:
+                    break
             self.qids, self.pids, self.scores = qids, pids, scores
 
 

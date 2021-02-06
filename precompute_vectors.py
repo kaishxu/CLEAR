@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from timeit import default_timer as timer
 from transformers import BertTokenizer, BertConfig
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, SequentialSampler
 from dataset import Collection, pack_tensor
 from modeling import CLEAR_Embedding
 
@@ -99,11 +99,11 @@ def generate_embeddings(args, model):
 
     embedding_memmap, id_memmap = create_embed_memmap(
         dataset.ids, memmap_dir, model.config.hidden_size)
-    id2pos = {identity:i for i, identity in enumerate(id_memmap)}
+    id2pos = {identity:i for i, identity in enumerate(id_memmap)}  #真实id: 当前id
     
     batch_size = args.per_gpu_batch_size * max(1, args.n_gpu)
-    # Note that DistributedSampler samples randomly
-    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_function)
+    seq_sampler = SequentialSampler(dataset)
+    dataloader = DataLoader(dataset, sampler=seq_sampler, batch_size=batch_size, collate_fn=collate_function)
 
     # multi-gpu eval
     if args.n_gpu > 1:
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("--collection_memmap_dir", type=str, default="./data/collection_memmap")
     parser.add_argument("--tokenize_dir", type=str, default="./data/tokenize")
     parser.add_argument("--max_query_length", type=int, default=20)
-    parser.add_argument("--max_doc_length", type=int, default=256)
+    parser.add_argument("--max_doc_length", type=int, default=128)
     parser.add_argument("--per_gpu_batch_size", default=256, type=int)
     args = parser.parse_args()
 
